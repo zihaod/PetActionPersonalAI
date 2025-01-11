@@ -1,4 +1,5 @@
 import subprocess
+import os
 from utils.utils import *
 
 
@@ -41,7 +42,7 @@ if __name__ == '__main__':
     # Load data from main database
     for fname in os.listdir(base_data_dir):
         if fname.startswith('猫') and fname.endswith('.json'):
-            fpath = base_data_dir + fname
+            fpath = os.path.join(base_data_dir, fname)
             data = read_json_data(fpath)
             base_data.append(data)
             
