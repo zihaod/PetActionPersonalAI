@@ -3,6 +3,28 @@ import subprocess
 
 
 if __name__ == '__main__':
+
+    # class data multiplier
+    idx2multiplier = dict()
+    idx2multiplier[0] = 1
+    idx2multiplier[1] = 1
+    idx2multiplier[2] = 8
+    idx2multiplier[3] = 1
+    idx2multiplier[4] = 7
+    idx2multiplier[5] = 10
+    idx2multiplier[6] = 1
+    idx2multiplier[7] = 15
+    idx2multiplier[8] = 20
+    idx2multiplier[9] = 1
+
+    # Load data from main database
+    cat_data = []
+    for fname in os.listdir('/content/drive/MyDrive/pet_project/pet_action/6月10日json合集'):
+        if fname.startswith('猫') and fname.endswith('.json'):
+            fpath = '/content/drive/MyDrive/pet_project/pet_action/6月10日json合集/' + fname
+            data = read_json_data(fpath)
+            cat_data.append(data)
+    
     # Define action labels
     actions = ['walk', 'sleep', 'run', 'lick', 'play', 'jump', 'feed', 'roll', 'scratch', 'rest']
     
@@ -19,19 +41,6 @@ if __name__ == '__main__':
     for d in dataset:
         label = d[1]
         base_split_data[label].append(d)
-    
-    
-    idx2multiplier = dict()
-    idx2multiplier[0] = 1
-    idx2multiplier[1] = 1
-    idx2multiplier[2] = 8
-    idx2multiplier[3] = 1
-    idx2multiplier[4] = 7
-    idx2multiplier[5] = 10
-    idx2multiplier[6] = 1
-    idx2multiplier[7] = 15
-    idx2multiplier[8] = 20
-    idx2multiplier[9] = 1
     
     
 
@@ -85,8 +94,9 @@ if __name__ == '__main__':
 
         # Load pretrained model weight
         model = torch.load('/content/drive/MyDrive/pet_project/pet_action/cat_models/cat_hidden_72_seq_20_scaledown_100_accdiff_20240622.pt').to(device)
+
+        # Start training
         try:
-    
           train(model, combined_loader, personal_loader, num_epoch, batch_size, lr, device)
           predictions, labels = evaluate(model, personal_loader, device=device)
           predictions, labels = evaluate(model, data_loader, device=device)
