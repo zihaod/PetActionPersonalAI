@@ -1,8 +1,10 @@
 import subprocess
-
+from utils.utils import*
 
 
 if __name__ == '__main__':
+    # Define action labels
+    actions = ['walk', 'sleep', 'run', 'lick', 'play', 'jump', 'feed', 'roll', 'scratch', 'rest']
 
     # class data multiplier
     idx2multiplier = dict()
@@ -17,16 +19,42 @@ if __name__ == '__main__':
     idx2multiplier[8] = 20
     idx2multiplier[9] = 1
 
-    # Load data from main database
+    # Training hyperparams
+    num_epoch = 3
+    batch_size = 1024
+    val_batch_size = 512
+    lr = 1e-3
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    date = '20250109'
+
+    # For dataset
     cat_data = []
+    fpaths_dict = {}
+    data_dir = '/content/drive/MyDrive/pet_project/pet_action/personal_AI_test_data/20250109数据标注/'
+    
+    # Model weight ckpt
+    pretrained_model_path = '/content/drive/MyDrive/pet_project/pet_action/cat_models/cat_hidden_72_seq_20_scaledown_100_accdiff_20240622.pt'
+    
+    ##############################
+
+    # Load data from main database
     for fname in os.listdir('/content/drive/MyDrive/pet_project/pet_action/6月10日json合集'):
         if fname.startswith('猫') and fname.endswith('.json'):
             fpath = '/content/drive/MyDrive/pet_project/pet_action/6月10日json合集/' + fname
             data = read_json_data(fpath)
             cat_data.append(data)
+            
+
+    # Group personal data files by identities
+    fpaths = get_json_files(data_dir)
+    keys = set(["_".join(p.split("/")[-1].split("_")[1:4]) for p in fpaths])
+    for k in keys:
+        fpaths_dict[k] = []
+        for p in fpaths:
+            if k in p:
+                fpaths_dict[k].append(p)
     
-    # Define action labels
-    actions = ['walk', 'sleep', 'run', 'lick', 'play', 'jump', 'feed', 'roll', 'scratch', 'rest']
+    print(fpaths_dict)
     
     # Load base dataset
     dataset = ActionDataset(cat_data, actions, seq_len=20, step_size=1, diff_mode="acc", augment=None)
@@ -41,9 +69,8 @@ if __name__ == '__main__':
     for d in dataset:
         label = d[1]
         base_split_data[label].append(d)
-    
-    
-
+        
+    # Iterate through each identity
     for k, fpaths in fpaths_dict.items():
         if '猫' not in k:
             continue
@@ -90,11 +117,10 @@ if __name__ == '__main__':
     
         combined_dataset = ActionDatasetFromGroup(combined_data, actions)
         combined_loader = DataLoader(combined_dataset, batch_size=batch_size, shuffle=True)
-    
 
         # Load pretrained model weight
-        model = torch.load('/content/drive/MyDrive/pet_project/pet_action/cat_models/cat_hidden_72_seq_20_scaledown_100_accdiff_20240622.pt').to(device)
-
+        model = torch.load(pretrained_model_path).to(device)
+        
         # Start training
         try:
           train(model, combined_loader, personal_loader, num_epoch, batch_size, lr, device)
@@ -104,7 +130,7 @@ if __name__ == '__main__':
           model.cpu()
           model_name = 'train_' + k + '_' + date
           
-          # Save model in binary format
+          # Save model in binary format and zip the files
           export_lstm_to_bin(model_name, model, 72)
           zip_cmd = ["zip", "-r", model_name + ".zip", model_name]
     
