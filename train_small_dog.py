@@ -1,9 +1,47 @@
 import subprocess
 import os
+import argparse
 from utils.utils import *
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description='Small Dog Action Recognition Training Script')
+    
+    # Add path arguments
+    parser.add_argument('--base_data_dir', 
+                        type=str, 
+                        default='/content/drive/MyDrive/pet_project/pet_action/6月10日json合集',
+                        help='Directory containing base training data')
+    
+    parser.add_argument('--data_dir', 
+                        type=str, 
+                        default='/content/drive/MyDrive/pet_project/pet_action/personal_AI_test_data/20250109数据标注/',
+                        help='Directory containing personal test data')
+    
+    parser.add_argument('--pretrained_model_path',
+                        type=str,
+                        default='/content/drive/MyDrive/pet_project/pet_action/dog_models/dog_small_hidden_72_seq_20_scaledown_100_accdiff_20240629.pt',
+                        help='Path to pretrained model weights')
+    
+    # Add optional training hyperparameters
+    parser.add_argument('--num_epochs', type=int, default=3,
+                        help='Number of training epochs')
+    parser.add_argument('--batch_size', type=int, default=1024,
+                        help='Training batch size')
+    parser.add_argument('--val_batch_size', type=int, default=512,
+                        help='Validation batch size')
+    parser.add_argument('--learning_rate', type=float, default=1e-3,
+                        help='Learning rate')
+    parser.add_argument('--date', type=str, default='20250109',
+                        help='Date string for model naming')
+    
+    return parser.parse_args()
+
+
 if __name__ == '__main__':
+    # Parse command line arguments
+    args = parse_args()
+    
     # Define action labels
     actions = ['toy', 'jump', 'rest', 'walk', 'sleep', 'feed', 'run', 'tail', 'roll']
 
@@ -19,28 +57,28 @@ if __name__ == '__main__':
     idx2multiplier[7] = 10
     idx2multiplier[8] = 8
 
-    # Training hyperparams
-    num_epoch = 3
-    batch_size = 1024
-    val_batch_size = 512
-    lr = 1e-3
+    # Training hyperparams (now from args)
+    num_epoch = args.num_epochs
+    batch_size = args.batch_size
+    val_batch_size = args.val_batch_size
+    lr = args.learning_rate
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    date = '20250109'
+    date = args.date
 
-    # For dataset
+    # For dataset (now from args)
     base_data = []
     fpaths_dict = {}
-    base_data_dir = '/content/drive/MyDrive/pet_project/pet_action/6月10日json合集'
-    data_dir = '/content/drive/MyDrive/pet_project/pet_action/personal_AI_test_data/20250109数据标注/'
+    base_data_dir = args.base_data_dir
+    data_dir = args.data_dir
     
-    # Model weight ckpt
-    pretrained_model_path = '/content/drive/MyDrive/pet_project/pet_action/dog_models/dog_small_hidden_72_seq_20_scaledown_100_accdiff_20240629.pt'
+    # Model weight ckpt (now from args)
+    pretrained_model_path = args.pretrained_model_path
     
     #######################################
 
     # Load data from main database
     for fname in os.listdir(base_data_dir):
-        if fname.startswith('小狗') and fname.endswith('.json'):
+        if fname.startswith('小狗') and fname.endswith('.json'):  # Changed to 小狗 for small dogs
             fpath = os.path.join(base_data_dir, fname)
             data = read_json_data(fpath)
             base_data.append(data)
@@ -76,7 +114,7 @@ if __name__ == '__main__':
         
     # Iterate through each identity
     for k, fpaths in fpaths_dict.items():
-        if '小狗' not in k:
+        if '小狗' not in k:  # Changed to 小狗 for small dogs
             continue
 
         print(k)
@@ -127,18 +165,18 @@ if __name__ == '__main__':
         
         # Start training
         try:
-          train(model, combined_loader, personal_loader, num_epoch, batch_size, lr, device)
-          predictions, labels = evaluate(model, personal_loader, device=device)
-          predictions, labels = evaluate(model, data_loader, device=device)
+            train(model, combined_loader, personal_loader, num_epoch, batch_size, lr, device)
+            predictions, labels = evaluate(model, personal_loader, device=device)
+            predictions, labels = evaluate(model, data_loader, device=device)
     
-          model.cpu()
-          model_name = 'train_' + k + '_' + date
-          
-          # Save model in binary format and zip the files
-          export_lstm_to_bin(model_name, model, 72)
-          zip_cmd = ["zip", "-r", model_name + ".zip", model_name]
+            model.cpu()
+            model_name = 'train_' + k + '_' + date
+            
+            # Save model in binary format and zip the files
+            export_lstm_to_bin(model_name, model, 72)
+            zip_cmd = ["zip", "-r", model_name + ".zip", model_name]
     
-          subprocess.run(zip_cmd)
+            subprocess.run(zip_cmd)
     
         except:
-          print(f"Failed file {fname}")
+            print(f"Failed file {fname}")
